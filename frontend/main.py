@@ -5,7 +5,7 @@ from client import analyse
 
 st.set_page_config(page_title="AI Resume Analyzer", page_icon="📄", layout="wide")
 
-st.title(" AI Resume Analyzer & Job Coach")
+st.title("📄 AI Resume Analyzer & Job Coach")
 st.caption("Upload your resume and paste a job description to get instant AI-powered feedback.")
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ with col1:
     if uploaded_file:
         try:
             resume_text = extract_text(uploaded_file)
-            st.success(f" Extracted {len(resume_text.split())} words")
+            st.success(f"✅ Extracted {len(resume_text.split())} words")
             with st.expander("Preview extracted text"):
                 st.text(resume_text[:500] + "..." if len(resume_text) > 500 else resume_text)
         except Exception as e:
@@ -49,7 +49,7 @@ with col2:
 
 # ── Analyze Button ─────────────────────────────────────────────────────────────
 st.divider()
-analyze_btn = st.button(" Analyze My Resume", type="primary", use_container_width=True)
+analyze_btn = st.button("🔍 Analyze My Resume", type="primary", use_container_width=True)
 
 if analyze_btn:
     if not resume_text:
@@ -57,14 +57,14 @@ if analyze_btn:
     elif not job_description.strip():
         st.error("Please paste a job description.")
     else:
-        with st.spinner("Analyzing your resume... this takes about 10–15 seconds "):
+        with st.spinner("Analyzing your resume... this takes about 10–15 seconds ⏳"):
             result = analyse(resume_text, job_description)
 
         if "error" in result:
             st.error(f"Analysis failed: {result['error']}")
         else:
             st.session_state["result"] = result
-            st.success(" Analysis complete!")
+            st.success("✅ Analysis complete!")
 
 # ── Results ────────────────────────────────────────────────────────────────────
 if "result" in st.session_state:
@@ -75,7 +75,7 @@ if "result" in st.session_state:
     report = result.get("report", {})
 
     st.divider()
-    st.subheader(" Your Scores")
+    st.subheader("📊 Your Scores")
 
     m1, m2, m3 = st.columns(3)
     m1.metric("ATS Score", f"{scores.get('ats_score', 0)} / 100")
@@ -84,7 +84,7 @@ if "result" in st.session_state:
 
     st.divider()
 
-    tab1, tab2, tab3, tab4 = st.tabs([" Skill Gap", " Interview Prep", " Bullet Rewrites", " Full Report"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Skill Gap", "🎤 Interview Prep", "✏️ Bullet Rewrites", "📋 Full Report"])
 
     # Tab 1 — Skill Gap
     with tab1:
@@ -93,14 +93,14 @@ if "result" in st.session_state:
         if matched:
             cols = st.columns(min(len(matched), 4))
             for i, skill in enumerate(matched):
-                cols[i % 4].success(f" {skill}")
+                cols[i % 4].success(f"✅ {skill}")
         else:
             st.info("No matched skills found.")
 
         st.subheader("Skill Gaps & Suggestions")
         gaps = scores.get("skill_gaps", [])
         for gap in gaps:
-            with st.expander(f" {gap.get('skill', '')}"):
+            with st.expander(f"❌ {gap.get('skill', '')}"):
                 st.write(gap.get("suggestion", ""))
 
     # Tab 2 — Interview Prep
@@ -147,7 +147,7 @@ if "result" in st.session_state:
     # Download button
     st.divider()
     st.download_button(
-        label="Download Full Analysis (JSON)",
+        label="⬇️ Download Full Analysis (JSON)",
         data=json.dumps(result, indent=2),
         file_name="resume_analysis.json",
         mime="application/json",
