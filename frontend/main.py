@@ -1,7 +1,12 @@
 import streamlit as st
 import json
+import os
+from dotenv import load_dotenv
 from utils import extract_text
 from client import analyse
+from groq import Groq
+
+load_dotenv() 
 
 st.set_page_config(page_title="AI Resume Analyzer", page_icon="📄", layout="wide")
 
@@ -64,6 +69,8 @@ if analyze_btn:
             st.error(f"Analysis failed: {result['error']}")
         else:
             st.session_state["result"] = result
+            st.session_state["resume_text"] = resume_text
+            st.session_state["job_description"] = job_description
             st.success("✅ Analysis complete!")
 
 # ── Results ────────────────────────────────────────────────────────────────────
@@ -86,7 +93,6 @@ if "result" in st.session_state:
 
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 Skill Gap", "🎤 Interview Prep", "✏️ Bullet Rewrites", "📋 Full Report"])
 
-    # Tab 1 — Skill Gap
     with tab1:
         st.subheader("Matched Skills")
         matched = scores.get("matched_skills", [])
@@ -103,7 +109,6 @@ if "result" in st.session_state:
             with st.expander(f"❌ {gap.get('skill', '')}"):
                 st.write(gap.get("suggestion", ""))
 
-    # Tab 2 — Interview Prep
     with tab2:
         questions = interview.get("questions", [])
         if questions:
@@ -116,7 +121,6 @@ if "result" in st.session_state:
         else:
             st.info("No interview questions generated.")
 
-    # Tab 3 — Bullet Rewrites
     with tab3:
         rewrites_list = rewrites.get("rewrites", [])
         if rewrites_list:
@@ -132,19 +136,15 @@ if "result" in st.session_state:
         else:
             st.info("No rewrites generated.")
 
-    # Tab 4 — Full Report
     with tab4:
         report_md = report.get("report_markdown", "")
         linkedin = report.get("linkedin_about", "")
-
         if report_md:
             st.markdown(report_md)
-
         if linkedin:
             st.subheader("💼 LinkedIn About Draft")
             st.text_area("Copy this to your LinkedIn profile:", value=linkedin, height=200)
 
-    # Download button
     st.divider()
     st.download_button(
         label="⬇️ Download Full Analysis (JSON)",
@@ -153,3 +153,85 @@ if "result" in st.session_state:
         mime="application/json",
         use_container_width=True
     )
+
+# ── Chatbot ────────────────────────────────────────────────────────────────────
+st.divider()
+st.subheader("💬 Ask the Career Coach")
+
+# Only show chatbot if analysis has been done
+if "result" not in st.session_state:
+    st.info("💡 Run the analysis first, then ask me anything about your results!")
+else:
+    # Build context from analysis results
+    result = st.session_state["result"]
+    resume_text = st.session_state.get("resume_text", "")
+    job_description = st.session_state.get("job_description", "")
+    scores = result.get("scores", {})
+
+    SYSTEM_PROMPT = f"""You are a helpful career coach AI assistant embedded in a resume analyzer app.
+You have access to the user's resume analysis results and can answer questions about them.
+
+ANALYSIS CONTEXT:
+- ATS Score: {scores.get('ats_score', 'N/A')}/100
+- Skill Match: {scores.get('skill_match_percent', 'N/A')}%
+- Tone Score: {scores.get('tone_score', 'N/A')}/100
+- Matched Skills: {', '.join(scores.get('matched_skills', []))}
+- Skill Gaps: {', '.join([g.get('skill','') for g in scores.get('skill_gaps', [])])}
+
+RESUME SUMMARY (first 1000 chars):
+{resume_text[:1000]}
+
+JOB DESCRIPTION SUMMARY (first 500 chars):
+{job_description[:500]}
+
+RULES:
+- Only answer questions related to: resume analysis results, career advice, interview preparation, job descriptions, skill development, and professional growth.
+- If asked about unrelated topics (weather, cooking, politics, etc.), politely decline and redirect to career topics.
+- Keep answers concise, actionable, and encouraging.
+- Always relate answers back to the user's specific resume and job description when relevant."""
+
+    # Initialize chat history
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
+
+    # Display chat history
+    for msg in st.session_state["chat_history"]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    # Chat input
+    user_input = st.chat_input("Ask me about your resume, interview tips, skill gaps...")
+
+    if user_input:
+        # Add user message
+        st.session_state["chat_history"].append({"role": "user", "content": user_input})
+
+        with st.chat_message("user"):
+            st.write(user_input)
+
+        # Get AI response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+                    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+                    messages += st.session_state["chat_history"]
+
+                    response = groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=500
+                    )
+                    reply = response.choices[0].message.content
+                except Exception as e:
+                    reply = f"Sorry, I encountered an error: {str(e)}"
+
+            st.write(reply)
+            st.session_state["chat_history"].append({"role": "assistant", "content": reply})
+
+    # Clear chat button
+    if st.session_state.get("chat_history"):
+        if st.button("🗑️ Clear chat history"):
+            st.session_state["chat_history"] = []
+            st.rerun()
