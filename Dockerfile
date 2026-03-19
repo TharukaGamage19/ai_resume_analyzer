@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir \
     httpx
 
 COPY backend/analyzer.py ./analyzer.py
+COPY backend/main.py ./main_api.py
 COPY frontend/utils.py ./utils.py
 COPY frontend/client.py ./client.py
 COPY frontend/main.py ./main.py
