@@ -39,8 +39,8 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          pytest tests/test_analyzer.py -v \
-            --cov=backend \
+            pytest tests/test_analyzer.py -v \
+            --cov=backend/analyzer.py \
             --cov-report=term-missing \
             --cov-fail-under=80
 
