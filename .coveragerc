@@ -1,0 +1,6 @@
+[run]
+source = backend
+omit = backend/main.py
+
+[report]
+fail_under = 80
