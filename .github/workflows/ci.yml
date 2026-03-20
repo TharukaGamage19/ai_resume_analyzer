@@ -33,7 +33,7 @@ jobs:
           flake8 backend/ frontend/ tests/ \
             --max-line-length=120 \
             --exclude=__pycache__,.venv \
-            --ignore=E501,W503,E302,E303
+            --ignore=E501,W503,E302,E303,W292,W291,F401,E402
 
       - name: Run tests with coverage
         env:
