@@ -1,0 +1,104 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  # ── Job 1: Lint + Test ──────────────────────────────────────────────────────
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install groq streamlit fastapi uvicorn pdfplumber python-docx \
+                      requests python-dotenv pydantic httpx \
+                      pytest pytest-cov flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 backend/ frontend/ tests/ \
+            --max-line-length=120 \
+            --exclude=__pycache__,.venv \
+            --ignore=E501,W503,E302,E303
+
+      - name: Run tests with coverage
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          pytest tests/test_analyzer.py -v \
+            --cov=backend \
+            --cov-report=term-missing \
+            --cov-fail-under=80
+
+  # ── Job 2: Security Scan ────────────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit security scan
+        run: |
+          bandit -r backend/ frontend/ \
+            -ll \
+            --exclude .venv \
+            -f txt
+
+  # ── Job 3: Build Check ──────────────────────────────────────────────────────
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [ test, security ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install groq fastapi uvicorn pdfplumber python-docx \
+                      requests python-dotenv pydantic httpx
+
+      - name: Verify backend imports
+        run: |
+          cd backend
+          python -c "from analyzer import analyze_full; print('Backend OK')"
+
+      - name: Verify frontend imports
+        run: |
+          cd frontend
+          python -c "from utils import extract_text; from client import analyse; print('Frontend OK')"
+
+      - name: CI complete
+        run: echo "All checks passed! Ready to deploy."
