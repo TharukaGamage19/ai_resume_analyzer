@@ -126,9 +126,7 @@ Every push to master triggers:
 
 ---
 
-## Team
-
-**Tharuka Gamage** 
+Tharuka Gamage
 ---
 
 ## License
