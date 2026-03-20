@@ -128,11 +128,7 @@ Every push to master triggers:
 
 ## Team
 
-**Tharuka Gamage** — AI/DS
-**Chamikara Gallage** — SE
-
-Built for Career Day 2025 — 2-day sprint.
-
+**Tharuka Gamage** 
 ---
 
 ## License
